@@ -6,8 +6,8 @@ import "./globals.css"; // Importa o CSS do Tailwind
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Gerador de Etiquetas",
-  description: "Aplicação para gerar etiquetas a partir de arquivos CSV",
+  title: "Gerador de Etiquetas DUN-14",
+  description: "Aplicação para gerar etiquetas DUN-14 a partir de arquivos CSV",
 };
 
 export default function RootLayout({

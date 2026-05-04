@@ -13,14 +13,9 @@ declare global {
   }
 }
 
-// Interface para os dados da Etiqueta Master AGT
+// Interface simplificada conforme sua solicitação
 interface CsvRow {
   MODELO: string;
-  QUANTIDADE: string;
-  PESO_BRUTO: string;
-  PESO_LIQUIDO: string;
-  DIMENSOES: string;
-  EAN: string;
   DUN: string;
   QTD_ETIQUETAS?: string;
 }
@@ -74,7 +69,7 @@ export default function EtiquetasMasterPage() {
         skipEmptyLines: true,
         delimiter: ";",
         complete: (results: any) => {
-          const requiredColumns = ['MODELO', 'QUANTIDADE', 'PESO_BRUTO', 'PESO_LIQUIDO', 'DIMENSOES', 'EAN', 'DUN'];
+          const requiredColumns = ['MODELO', 'DUN'];
           const fileColumns = results.meta.fields || [];
           const missingColumns = requiredColumns.filter(col => !fileColumns.includes(col));
 
@@ -91,13 +86,13 @@ export default function EtiquetasMasterPage() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = "\uFEFFMODELO;QUANTIDADE;PESO_BRUTO;PESO_LIQUIDO;DIMENSOES;EAN;DUN;QTD_ETIQUETAS\n" +
-                       "AGT-SFT1;20;14,40;13,60;555 x 365 x 385;7898663992717;17898663996118;1";
+    const csvContent = "\uFEFFMODELO;DUN;QTD_ETIQUETAS\n" +
+                       "AGT-SFT1;17898663996118;1";
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "modelo_etiquetas_agt.csv";
+    link.download = "modelo_etiquetas_dun14.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -118,10 +113,9 @@ export default function EtiquetasMasterPage() {
           window.bwipjs.toCanvas(canvas, {
             bcid: 'code128', 
             text: cleanText,
-            scale: 3,
-            height: 10,
-            includetext: true,
-            textxalign: 'center',
+            scale: 5,        
+            height: 12,
+            includetext: false, 
           });
           resolve(canvas.toDataURL("image/png"));
         } catch (e) { 
@@ -132,69 +126,48 @@ export default function EtiquetasMasterPage() {
 
     try {
       for (const row of csvData) {
-        if (!row.MODELO) continue;
+        if (!row.MODELO || !row.DUN) continue;
         
         const doc = new window.jspdf.jsPDF({
           orientation: 'landscape',
           unit: 'mm',
-          format: [100, 70], 
+          format: [100, 25], 
         });
 
         const quantity = parseInt(row.QTD_ETIQUETAS || '1', 10);
-        const barcodeTop = await generateBarcodeImage(row.EAN);
-        const barcodeBottom = await generateBarcodeImage(row.DUN);
+        const barcodeImage = await generateBarcodeImage(row.DUN);
 
         for (let i = 0; i < quantity; i++) {
           if (i > 0) doc.addPage();
 
           const pageW = 100;
-          const pageH = 70;
 
-          // --- CABEÇALHO INVERTIDO ---
-          doc.setFillColor(0, 0, 0); 
-          doc.rect(0, 0, pageW, 16, 'F'); 
-          
-          doc.setTextColor(255, 255, 255); 
+          // 1. SKU / MODELO - Fonte reduzida para dar destaque ao código de barras
+          doc.setTextColor(0, 0, 0);
           doc.setFont("Helvetica", "bold");
-          doc.setFontSize(26);
-          doc.text(row.MODELO, pageW / 2, 11, { align: 'center' });
+          doc.setFontSize(16);
+          doc.text(row.MODELO, pageW / 2, 7, { align: 'center' });
 
-          // --- DADOS DA ETIQUETA ---
-          doc.setTextColor(0, 0, 0); 
-          const colL = 4;
-          const valL = 28;
-          
-          const addLabelRow = (label: string, desc: string, value: string, y: number, fSize: number = 14) => {
-            doc.setFont("Helvetica", "bold"); doc.setFontSize(10); doc.text(label, colL, y);
-            doc.setFont("Helvetica", "normal"); doc.setFontSize(7); doc.text(desc, colL, y + 3.5);
-            doc.setFont("Helvetica", "bold"); doc.setFontSize(fSize); doc.text(value, valL, y + 1);
-          };
+          // 2. CÓDIGO DE BARRAS - Mais largo (80mm) para maior destaque
+          doc.addImage(barcodeImage, 'PNG', 10, 8, 80, 10);
 
-          addLabelRow("QTY.:", "Quantidade Total", `${row.QUANTIDADE} unid.`, 26);
-          addLabelRow("GW.:", "Peso Bruto", `${row.PESO_BRUTO} kg`, 38);
-          addLabelRow("NW.:", "Peso Líquido", `${row.PESO_LIQUIDO} kg`, 50);
-          addLabelRow("MEAS.:", "Dimensões", `${row.DIMENSOES} mm`, 62, 12);
-
-          doc.addImage(barcodeTop, 'PNG', 50, 20, 45, 12);
-          doc.addImage(barcodeBottom, 'PNG', 50, 47, 45, 12);
-
+          // 3. NÚMERAL DUN-14 - Com espaçamento vertical (Y ajustado para 22)
           doc.setFont("Helvetica", "bold");
-          doc.setFontSize(10);
-          doc.text("AGETHERM", pageW - 4, pageH - 3, { align: 'right' });
+          doc.setFontSize(12);
+          const spacedDun = row.DUN.split('').join('  '); 
+          doc.text(spacedDun, pageW / 2, 22, { align: 'center' });
         }
 
-        // Adiciona o PDF gerado ao arquivo ZIP em vez de baixar imediatamente
         const pdfBlob = doc.output('blob');
         const safeFileName = `${row.MODELO.replace(/[^a-z0-9]/gi, '_')}.pdf`;
         zip.file(safeFileName, pdfBlob);
       }
 
-      // Gera o arquivo ZIP e dispara o download único
       const zipContent = await zip.generateAsync({ type: 'blob' });
       const zipUrl = URL.createObjectURL(zipContent);
       const link = document.createElement('a');
       link.href = zipUrl;
-      link.download = "etiquetas_master_agetherm.zip";
+      link.download = "etiquetas_dun14_agetherm.zip";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -206,12 +179,10 @@ export default function EtiquetasMasterPage() {
     }
   };
 
-  const labelStyles = "block font-bold text-[#002B5B] text-xs uppercase mb-1";
-
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8 font-sans">
       <Head>
-        <title>Agetherm - Gerador de Etiquetas Master</title>
+        <title>Agetherm - Gerador de Etiquetas DUN-14</title>
       </Head>
 
       <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-xl border-t-8 border-[#FF8C00] overflow-hidden">
@@ -227,7 +198,7 @@ export default function EtiquetasMasterPage() {
               }}
             />
           </div>
-          <h1 className="text-2xl font-extrabold text-[#002B5B]">GERADOR DE ETIQUETAS MASTER</h1>
+          <h1 className="text-2xl font-extrabold text-[#002B5B]">GERADOR DE ETIQUETAS DUN-14</h1>
         </div>
 
         <div className="p-8 space-y-8">
@@ -240,7 +211,7 @@ export default function EtiquetasMasterPage() {
 
           <div className="space-y-6">
             <div>
-              <label className={labelStyles}>Faça o upload do arquivo CSV</label>
+              <label className="block font-bold text-[#002B5B] text-xs uppercase mb-1">Faça o upload do arquivo CSV (BAIXE O MODELO)</label>
               <label className="flex items-center gap-3 cursor-pointer group border-2 border-dashed border-gray-200 p-6 rounded-lg hover:bg-gray-50 transition-all">
                 <div className="bg-[#002B5B] text-white px-5 py-2 rounded font-bold text-xs group-hover:bg-[#001f42] transition-colors uppercase shadow-sm">
                   Escolher CSV
@@ -264,10 +235,7 @@ export default function EtiquetasMasterPage() {
                 onClick={downloadTemplate}
                 className="flex items-center justify-center gap-2 bg-gray-200 text-[#002B5B] py-4 rounded-lg font-bold text-xs hover:bg-gray-300 transition-colors uppercase"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Modelo CSV
+                Baixar Modelo CSV
               </button>
 
               <button 
@@ -276,7 +244,7 @@ export default function EtiquetasMasterPage() {
                 disabled={loading || csvData.length === 0 || !scriptsLoaded}
                 className="bg-[#FF8C00] text-white py-4 rounded-lg font-bold text-sm hover:bg-[#e67e00] transition-colors disabled:bg-gray-300 shadow-md flex items-center justify-center gap-2 uppercase"
               >
-                {loading ? "Preparando ZIP..." : "Gerar Etiquetas ZIP"}
+                {loading ? "Gerando..." : "Gerar Etiquetas (100x25mm)"}
               </button>
             </div>
           </div>
@@ -289,7 +257,6 @@ export default function EtiquetasMasterPage() {
 
         </div>
       </div>
-      
     </div>
   );
 }
