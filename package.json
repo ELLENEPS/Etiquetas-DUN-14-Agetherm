@@ -1,0 +1,37 @@
+{
+  "name": "etiquetas-dun-14",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@types/bwip-js": "^3.2.3",
+    "bwip-js": "^4.5.1",
+    "canvas": "^3.1.0",
+    "jsbarcode": "^3.11.6",
+    "jspdf": "^2.5.2",
+    "next": "^16.0.9",
+    "papaparse": "^5.5.3",
+    "react": "^19.2.2",
+    "react-dom": "^19.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/papaparse": "^5.3.16",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^8",
+    "eslint-config-next": "15.0.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": "20.x"
+  }
+}
