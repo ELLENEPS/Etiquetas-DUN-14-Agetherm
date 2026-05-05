@@ -15,7 +15,6 @@ declare global {
 interface CsvRow {
   ID: string;
   DESCRICAO: string;
-  CAIXA: string;
   DUN: string;
   QTD_ETIQUETAS?: string;
 }
@@ -71,7 +70,7 @@ export default function EtiquetasMasterPage() {
         skipEmptyLines: true,
         delimiter: ";",
         complete: (results: any) => {
-          const requiredColumns = ['ID', 'DESCRICAO', 'CAIXA', 'DUN'];
+          const requiredColumns = ['ID', 'DESCRICAO', 'DUN'];
           const fileColumns = results.meta.fields || [];
           const missingColumns = requiredColumns.filter(col => !fileColumns.includes(col));
           if (missingColumns.length > 0) {
@@ -85,16 +84,17 @@ export default function EtiquetasMasterPage() {
     }
   };
 
-  const formatHeaderText = (id: string, desc: string, caixa: string) => {
-    const limit = 58; 
-    const prefix = `(${id} - `;
-    const suffix = `) CAIXA - ${caixa}`;
-    if ((prefix + desc + suffix).length > limit) {
-      const availableSpace = limit - prefix.length - suffix.length - 3;
+  // Ajuste: Limite reduzido para 45 caracteres para manter o texto dentro da largura das barras
+  const formatHeaderText = (id: string, desc: string) => {
+    const limit = 45; 
+    const prefix = `${id} - `;
+    
+    if ((prefix + desc).length > limit) {
+      const availableSpace = limit - prefix.length - 3;
       const truncatedDesc = desc.substring(0, Math.max(0, availableSpace)) + "...";
-      return `${prefix}${truncatedDesc}${suffix}`;
+      return `${prefix}${truncatedDesc}`;
     }
-    return `${prefix}${desc}${suffix}`;
+    return `${prefix}${desc}`;
   };
 
   const generatePDF = async () => {
@@ -131,7 +131,7 @@ export default function EtiquetasMasterPage() {
 
         const quantity = parseInt(row.QTD_ETIQUETAS || '1', 10);
         const barcodeImage = await generateBarcodeImage(row.DUN);
-        const headerText = formatHeaderText(row.ID, row.DESCRICAO.toUpperCase(), row.CAIXA);
+        const headerText = formatHeaderText(row.ID, row.DESCRICAO.toUpperCase());
 
         for (let i = 0; i < quantity; i++) {
           if (i > 0) doc.addPage();
@@ -139,7 +139,8 @@ export default function EtiquetasMasterPage() {
 
           doc.setFont("Helvetica", "bold");
           doc.setFontSize(8);
-          doc.text(headerText, pageW / 2, 7, { align: 'center' });
+          // Centralizado em relação à página, com limite de largura de 80mm para segurança
+          doc.text(headerText, pageW / 2, 7, { align: 'center', maxWidth: 80 });
 
           doc.addImage(barcodeImage, 'PNG', 5, 9.5, 90, 11);
 
@@ -183,7 +184,6 @@ export default function EtiquetasMasterPage() {
               <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} disabled={!scriptsLoaded} />
             </label>
 
-            {/* Blocos de Quantidade movidos para baixo do upload */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 border p-4 rounded-xl text-center shadow-sm">
                 <p className="text-[10px] uppercase font-bold text-gray-500">Total SKUs</p>
@@ -197,7 +197,7 @@ export default function EtiquetasMasterPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button onClick={() => {
-                const csv = "\uFEFFID;DESCRICAO;CAIXA;DUN;QTD_ETIQUETAS\nAGT-SFT1;MOTOR VENTILADOR;50;17898663996118;1";
+                const csv = "\uFEFFID;DESCRICAO;DUN;QTD_ETIQUETAS\nAGT-SFT1;MOTOR VENTILADOR;17898663996118;1";
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
                 link.download = "modelo_etiquetas_dun-14.csv";
