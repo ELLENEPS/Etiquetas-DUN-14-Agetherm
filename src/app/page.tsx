@@ -164,13 +164,13 @@ export default function EtiquetasMasterPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8 font-sans">
-      <Head><title>Agetherm - Gerador de Etiquetas DUN-14</title></Head>
+      <Head><title>Agetherm - Gerador de Etiquetas DUN-14 (MAGLOG)</title></Head>
       <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-xl border-t-8 border-[#FF8C00] overflow-hidden">
         <div className="p-6 text-center border-b border-gray-100">
           <div className="h-20 flex items-center justify-center mb-4">
             <img src={`/logo.png?v=${timestamp}`} alt="Agetherm Logo" className="max-h-full" />
           </div>
-          <h1 className="text-2xl font-extrabold text-[#002B5B]">GERADOR DE ETIQUETAS DUN-14</h1>
+          <h1 className="text-2xl font-extrabold text-[#002B5B]">GERADOR DE ETIQUETAS DUN-14 - MAGLOG</h1>
         </div>
         <div className="p-8 space-y-8">
           {error && <div className="p-4 bg-red-100 text-red-800 rounded-lg text-center font-bold text-sm">{error}</div>}
